@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>PM-Werkstatt Robo-Sumo</title>
+<style>
+:root{
+  --paper:#F2F5F4; --sheet:#FFFFFF; --ink:#1B262D; --muted:#56646C; --line:#C9D2D5; --line-soft:#E3E9EA;
+  --accent:#0E6B6B; --accent-ink:#FFFFFF; --accent-soft:#DDEDEC;
+  --stamp:#B3261E; --ok:#2B7A34; --ok-soft:#E3F1E4; --bad:#B3261E; --bad-soft:#F8E4E2; --warn:#9A5B00; --warn-soft:#FBEFD9;
+  --grid:rgba(14,107,107,.07);
+  --f-display:"Avenir Next Condensed","Roboto Condensed","Arial Narrow",sans-serif-condensed,Arial,sans-serif;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --f-mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --paper:#111719; --sheet:#182023; --ink:#E3EAEC; --muted:#98A6AC; --line:#34424A; --line-soft:#253034;
+  --accent:#4FB3AF; --accent-ink:#0B1616; --accent-soft:#17302F;
+  --stamp:#F0776B; --ok:#74C27A; --ok-soft:#1A2E1C; --bad:#F0776B; --bad-soft:#35201E; --warn:#E6A94E; --warn-soft:#342914;
+  --grid:rgba(79,179,175,.06);
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#111719; --sheet:#182023; --ink:#E3EAEC; --muted:#98A6AC; --line:#34424A; --line-soft:#253034;
+  --accent:#4FB3AF; --accent-ink:#0B1616; --accent-soft:#17302F;
+  --stamp:#F0776B; --ok:#74C27A; --ok-soft:#1A2E1C; --bad:#F0776B; --bad-soft:#35201E; --warn:#E6A94E; --warn-soft:#342914;
+  --grid:rgba(79,179,175,.06);
+}
+*{box-sizing:border-box}
+body{
+  background:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;
+  color:var(--ink); font-family:var(--f-body); font-size:16px; line-height:1.6;
+}
+.wrap{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:24px 64px}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;line-height:1.1;text-wrap:balance;margin:0}
+h1{font-size:clamp(2.2rem,5vw,3.2rem);letter-spacing:.01em}
+h2{font-size:1.9rem}
+h3{font-size:1.35rem;letter-spacing:.01em}
+p{margin:0}
+.label{font-family:var(--f-mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}
+a{color:var(--accent)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* Schriftfeld header */
+.titleblock{background:var(--sheet);border:2px solid var(--ink);display:grid;grid-template-columns:1fr auto}
+.titleblock .main{padding:20px 22px;display:grid;gap:10px;border-right:2px solid var(--ink)}
+.titleblock .meta{display:grid;grid-template-rows:repeat(3,auto);min-width:210px}
+.titleblock .meta div{padding:8px 14px;border-bottom:1px solid var(--ink);display:grid;gap:2px}
+.titleblock .meta div:last-child{border-bottom:0}
+.titleblock .meta b{font-family:var(--f-mono);font-weight:500;font-size:.9rem}
+@media (max-width:640px){.titleblock{grid-template-columns:1fr}.titleblock .main{border-right:0;border-bottom:2px solid var(--ink)}.titleblock .meta{grid-template-columns:repeat(3,1fr);grid-template-rows:auto;min-width:0}.titleblock .meta div{border-bottom:0;border-right:1px solid var(--ink)}.titleblock .meta div:last-child{border-right:0}}
+
+/* tabs */
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;margin-top:18px;background:var(--paper);padding-block:8px;overflow-x:auto}
+nav.tabs ol{list-style:none;margin:0;padding:0;display:flex;gap:6px;min-width:max-content}
+nav.tabs button{font:500 .92rem var(--f-body);color:var(--ink);background:var(--sheet);border:1px solid var(--line);padding:8px 14px;border-radius:3px;cursor:pointer;display:flex;gap:8px;align-items:center}
+nav.tabs button .n{font-family:var(--f-mono);font-size:.72rem;color:var(--muted)}
+nav.tabs button[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+nav.tabs button[aria-selected="true"] .n{color:var(--paper);opacity:.75}
+nav.tabs button.gate{border-style:dashed;border-color:var(--stamp);color:var(--stamp)}
+nav.tabs button.gate[aria-selected="true"]{background:var(--stamp);color:var(--sheet);border-style:solid}
+
+section.panel{display:grid;gap:22px;margin-top:22px}
+.sheet{background:var(--sheet);border:1px solid var(--line);padding:22px;display:grid;gap:14px}
+.sheet.plain{background:transparent;border:0;padding:0}
+.intro{display:grid;gap:8px;max-width:68ch}
+.prose{display:grid;gap:10px;max-width:68ch}
+.prose ul{margin:0;padding-left:1.2em;display:grid;gap:4px}
+
+.task-head{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.task-head .tag{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;background:var(--accent-soft);color:var(--accent);padding:2px 8px;border-radius:2px}
+.task-head .tag.team{background:var(--warn-soft);color:var(--warn)}
+.task-head .tag.ln{background:var(--bad-soft);color:var(--stamp)}
+
+/* phase cards */
+.phases{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--ink)}
+.phase{padding:14px;display:grid;gap:8px;align-content:start;border-right:1px solid var(--ink);background:var(--sheet)}
+.phase:last-child{border-right:0}
+.phase .ph-n{font-family:var(--f-display);font-size:2.4rem;line-height:1;color:var(--accent)}
+.phase h3{font-size:1.2rem}
+.phase ul{margin:0;padding-left:1.1em;font-size:.9rem;display:grid;gap:3px}
+.phase .result{font-size:.85rem;border-top:1px dashed var(--line);padding-top:8px}
+.phase .result b{font-family:var(--f-mono);font-weight:500;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block}
+@media (max-width:760px){.phases{grid-template-columns:1fr 1fr}.phase:nth-child(2){border-right:0}.phase:nth-child(-n+2){border-bottom:1px solid var(--ink)}}
+@media (max-width:440px){.phases{grid-template-columns:1fr}.phase{border-right:0;border-bottom:1px solid var(--ink)}.phase:last-child{border-bottom:0}}
+
+/* case file */
+.case{border-left:4px solid var(--accent);background:var(--accent-soft);padding:14px 16px;display:grid;gap:8px}
+.case dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;margin:0;font-size:.92rem}
+.case dt{font-family:var(--f-mono);font-size:.78rem;color:var(--muted);padding-top:2px}
+.case dd{margin:0}
+
+/* assign rows */
+.rows{display:grid;gap:8px}
+.row{display:grid;grid-template-columns:1fr 210px;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line-soft);background:var(--sheet)}
+.row .txt{font-size:.95rem}
+.row .fb{grid-column:1/-1;font-size:.88rem;padding:6px 10px;border-radius:2px}
+.row.ok{border-color:var(--ok)} .row.ok .fb{background:var(--ok-soft);color:var(--ink)}
+.row.bad{border-color:var(--bad)} .row.bad .fb{background:var(--bad-soft);color:var(--ink)}
+@media (max-width:600px){.row{grid-template-columns:1fr}}
+select,input[type=text],textarea{font:inherit;font-size:.95rem;color:var(--ink);background:var(--sheet);border:1px solid var(--line);border-radius:2px;padding:8px 10px;width:100%}
+textarea{min-height:88px;resize:vertical;line-height:1.5}
+label.f{display:grid;gap:6px;font-weight:500;font-size:.95rem}
+label.f .hint{font-weight:400;font-size:.85rem;color:var(--muted)}
+
+.btns{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+button.btn{font:600 .92rem var(--f-body);padding:9px 16px;border-radius:2px;cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink)}
+button.btn.ghost{background:transparent;color:var(--accent)}
+button.btn.stamp{background:var(--stamp);border-color:var(--stamp);color:var(--sheet)}
+.score{font-family:var(--f-mono);font-size:.88rem}
+
+/* mail / detective */
+.mail{border:1px solid var(--line);background:var(--sheet)}
+.mail header{padding:10px 14px;border-bottom:1px solid var(--line);font-size:.85rem;display:grid;gap:2px;font-family:var(--f-mono)}
+.mail .body{padding:14px;display:grid;gap:6px}
+.sent{all:unset;cursor:pointer;display:block;padding:6px 8px;border-radius:2px;border:1px dashed transparent;line-height:1.55}
+.sent:hover{border-color:var(--line)}
+.sent:focus-visible{outline:3px solid var(--accent)}
+.sent .sn{font-family:var(--f-mono);font-size:.72rem;color:var(--muted);margin-right:6px}
+.sent.flag{background:var(--warn-soft);border-color:var(--warn)}
+.sent.hit{background:var(--ok-soft);border-color:var(--ok);border-style:solid}
+.sent.miss{background:var(--bad-soft);border-color:var(--bad);border-style:solid}
+.sent.false{background:var(--bad-soft);border-color:var(--bad)}
+.explain{font-size:.88rem;padding:4px 8px 6px 30px;color:var(--ink)}
+
+/* triangle */
+.tri-wrap{display:grid;grid-template-columns:260px 1fr;gap:22px;align-items:start}
+@media (max-width:680px){.tri-wrap{grid-template-columns:1fr}}
+.tri svg{width:100%;max-width:260px;height:auto;display:block;margin-inline:auto}
+.tri .corner{fill:var(--sheet);stroke:var(--ink);stroke-width:2}
+.tri .corner.hit{fill:var(--stamp);stroke:var(--stamp)}
+.tri text{fill:var(--ink);font-family:var(--f-mono);font-size:12px}
+.tri .edge{stroke:var(--ink);stroke-width:2;fill:none}
+.tri .body{fill:var(--accent-soft)}
+.opts{display:grid;gap:8px}
+.opt{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:10px 12px;border:1px solid var(--line);background:var(--sheet);cursor:pointer}
+.opt:has(input:checked){border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.opt input{margin-top:5px;accent-color:var(--accent)}
+.opt small{display:block;color:var(--muted);font-size:.85rem}
+
+details{border:1px solid var(--line);background:var(--sheet)}
+details summary{cursor:pointer;padding:10px 14px;font-weight:600;font-size:.93rem}
+details .inner{padding:4px 16px 16px;display:grid;gap:10px;font-size:.93rem}
+details.eh summary{color:var(--stamp)}
+.eh table{border-collapse:collapse;width:100%;font-size:.88rem}
+.eh th,.eh td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+.eh th{font-family:var(--f-mono);font-weight:500;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.eh td.p{font-family:var(--f-mono);white-space:nowrap;text-align:right}
+.tablewrap{overflow-x:auto}
+
+/* team phase table */
+.tp{border-collapse:collapse;width:100%;min-width:640px}
+.tp th,.tp td{border:1px solid var(--line);padding:8px;vertical-align:top;text-align:left}
+.tp th{font-family:var(--f-mono);font-weight:500;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--paper)}
+.tp td:first-child{font-family:var(--f-display);font-size:1.15rem;font-weight:700;width:130px}
+.tp textarea{min-height:70px;font-size:.9rem}
+
+.checks{display:grid;gap:6px}
+.checks label{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;font-size:.95rem}
+.checks input{margin-top:5px;accent-color:var(--accent);width:16px;height:16px}
+
+/* overview */
+.modgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media (max-width:760px){.modgrid{grid-template-columns:1fr}}
+.mod{background:var(--sheet);border:1px solid var(--line);padding:16px;display:grid;gap:10px;align-content:start}
+.mod.active{border:2px solid var(--ink)}
+.mod .code{font-family:var(--f-mono);font-size:.8rem;color:var(--accent)}
+.mod ol{margin:0;padding-left:1.2em;font-size:.9rem;display:grid;gap:3px}
+.pill{justify-self:start;font-family:var(--f-mono);font-size:.72rem;padding:2px 8px;border-radius:10px;border:1px solid var(--line);color:var(--muted)}
+.pill.on{border-color:var(--accent);color:var(--accent)}
+.gatebox{border:2px dashed var(--stamp);padding:10px 12px;display:grid;gap:4px;font-size:.88rem}
+.gatebox b{font-family:var(--f-mono);font-weight:500;color:var(--stamp);font-size:.78rem;letter-spacing:.06em}
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--line)}
+.flow div{padding:12px;border-right:1px solid var(--line);background:var(--sheet);display:grid;gap:4px}
+.flow div:last-child{border-right:0;background:var(--bad-soft)}
+.flow b{font-family:var(--f-display);font-size:1.15rem}
+.flow span{font-size:.86rem;color:var(--muted)}
+@media (max-width:640px){.flow{grid-template-columns:1fr}.flow div{border-right:0;border-bottom:1px solid var(--line)}}
+
+/* stamp */
+.stampmark{justify-self:start;font-family:var(--f-display);font-size:1.6rem;letter-spacing:.12em;color:var(--stamp);border:3px solid var(--stamp);padding:4px 14px;transform:rotate(-3deg);border-radius:3px}
+.nextbar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.toast{font-size:.9rem;padding:8px 12px;border-radius:2px}
+.toast.ok{background:var(--ok-soft)} .toast.bad{background:var(--bad-soft)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<style>html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="titleblock">
+    <div class="main">
+      <span class="label">Rudolf-Diesel-Fachschule · Projektmanagement · Robo-Sumo</span>
+      <h1>PM-Werkstatt</h1>
+      <p class="muted" style="max-width:60ch">Sie lernen Projektmanagement an einem Musterfall aus dem Maschinenbau und übertragen es Schritt für Schritt auf Ihr Robo-Sumo-Projekt. Am Ende jedes Moduls steht ein Stück Ihrer echten Projektdokumentation.</p>
+    </div>
+    <div class="meta">
+      <div><span class="label">Modul</span><b>PM_01</b></div>
+      <div><span class="label">Stand</span><b>26.09.2026</b></div>
+      <div><span class="label">Freigabe</span><b>Gate G1</b></div>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Kursabschnitte">
+    <ol role="tablist">
+      <li><button role="tab" data-tab="uebersicht" id="t-uebersicht"><span class="n">00</span>Übersicht</button></li>
+      <li><button role="tab" data-tab="stufe1" id="t-stufe1"><span class="n">S1</span>Musterfall analysieren</button></li>
+      <li><button role="tab" data-tab="stufe2" id="t-stufe2"><span class="n">S2</span>Zielkonflikte lösen</button></li>
+      <li><button role="tab" data-tab="stufe3" id="t-stufe3"><span class="n">S3</span>Unser Robo-Sumo</button></li>
+      <li><button role="tab" data-tab="gate" id="t-gate" class="gate"><span class="n">G1</span>Freigabe</button></li>
+    </ol>
+  </nav>
+
+  <!-- ÜBERSICHT -->
+  <section class="panel" id="uebersicht" role="tabpanel" aria-labelledby="t-uebersicht">
+    <div class="intro">
+      <span class="label">So funktioniert der Kurs</span>
+      <h2>Jedes Modul hat drei Stufen und endet mit einer Freigabe</h2>
+    </div>
+    <div class="flow">
+      <div><b>S1 Musterfall analysieren</b><span>Sie lesen, ordnen zu und suchen Fehler in Dokumenten der Brenner Federtechnik GmbH.</span></div>
+      <div><b>S2 Anwenden</b><span>Sie treffen Entscheidungen im Musterfall und begründen sie. Hier üben Sie auch für die Leistungsnachweise.</span></div>
+      <div><b>S3 Unser Robo-Sumo</b><span>Ihr Team erstellt einen Baustein der eigenen Projektdokumentation.</span></div>
+      <div><b>Gate</b><span>Sie speichern Ihre Ergebnisse als Datei und reichen sie ein. Die Lehrkraft nimmt sie im Präsenzunterricht ab.</span></div>
+    </div>
+
+    <div class="modgrid">
+      <article class="mod active">
+        <span class="code">PM_01</span>
+        <h3>Vier-Phasen-Modell und magisches Dreieck</h3>
+        <ol><li>Projektmerkmale, vier Phasen</li><li>Zielkonflikte Zeit, Kosten, Qualität</li><li>Phasenfahrplan Robo-Sumo</li></ol>
+        <div class="gatebox"><b>GATE G1</b>Phasenfahrplan und Zielkonflikt Ihres Teams</div>
+        <span class="pill on">freigeschaltet</span>
+      </article>
+      <article class="mod">
+        <span class="code">PM_02</span>
+        <h3>Definitionsphase</h3>
+        <ol><li>Ausgangslage und Problembeschreibung</li><li>Zielarten, SMART-Ziele</li><li>Projektvereinbarung Robo-Sumo</li></ol>
+        <div class="gatebox"><b>GATE G2</b>Unterschriebene Projektvereinbarung</div>
+        <span class="pill">folgt</span>
+      </article>
+      <article class="mod">
+        <span class="code">PM_03</span>
+        <h3>Planungsphase</h3>
+        <ol><li>Arbeitspakete, Projektstrukturplan</li><li>Meilensteine, Protokoll, Stundennachweis</li><li>PSP Robo-Sumo</li></ol>
+        <div class="gatebox"><b>GATE G3</b>Abgenommener PSP, Protokoll eingerichtet</div>
+        <span class="pill">folgt</span>
+      </article>
+    </div>
+
+    <div class="sheet">
+      <div class="task-head"><h3>Der Musterfall: Brenner Federtechnik GmbH</h3><span class="tag">läuft durch alle Module</span></div>
+      <div class="case">
+        <dl>
+          <dt>Unternehmen</dt><dd>Brenner Federtechnik GmbH, Fürth (fiktiv) – fertigt Druckfedern für die Automobilzulieferung, 140 Mitarbeitende</dd>
+          <dt>Problem</dt><dd>Federn werden stichprobenweise von Hand geprüft: 4 min je Feder, 3 % Reklamationen wegen falscher Federrate</dd>
+          <dt>Projekt</dt><dd>FKP-1: Bau eines automatischen Prüfstands, der die Federkennlinie (Kraft über Federweg) misst</dd>
+          <dt>Auftraggeber</dt><dd>Werkleiter Dr. Kraus</dd>
+          <dt>Projektleitung</dt><dd>Lea Sommer, staatlich geprüfte Technikerin, mit einem Team aus 4 Personen</dd>
+          <dt>Eckdaten</dt><dd>Budget 38.000 € · Inbetriebnahme bis 30.06. (Serienanlauf eines Neukunden) · Messgenauigkeit ±1 % · Prüfzeit ≤ 45 s je Feder</dd>
+        </dl>
+      </div>
+      <p class="muted" style="font-size:.9rem">Ihre Eingaben werden nur in diesem Browser zwischengespeichert. Zum Einreichen speichern Sie sie im Reiter „Freigabe“ als Datei.</p>
+    </div>
+    <div class="nextbar"><span></span><button class="btn" data-go="stufe1">Mit Stufe 1 beginnen</button></div>
+  </section>
+
+  <!-- STUFE 1 -->
+  <section class="panel" id="stufe1" role="tabpanel" aria-labelledby="t-stufe1" hidden>
+    <div class="intro">
+      <span class="label">Stufe 1 · Einzelarbeit · ca. 45 min</span>
+      <h2>Musterfall analysieren: Was ist ein Projekt und wie läuft es ab?</h2>
+    </div>
+
+    <div class="sheet">
+      <div class="task-head"><h3>1.1 Projekt oder Routine?</h3><span class="tag">Zuordnen</span></div>
+      <div class="prose">
+        <p>Ein <b>Projekt</b> ist ein Vorhaben, das <b>einmalig</b> ist, ein <b>klares Ziel</b> hat, <b>zeitlich begrenzt</b> ist (fester Start und Endtermin) und mit <b>begrenzten Mitteln</b> (Geld, Personal, Material) auskommen muss. Meist ist es neuartig und so umfangreich, dass ein Team mit verteilten Aufgaben nötig ist.</p>
+        <p>Die tägliche Arbeit in Fertigung und Instandhaltung wiederholt sich dagegen. Sie heißt <b>Routine</b> oder Linienaufgabe.</p>
+      </div>
+      <p><b>Auftrag:</b> Entscheiden Sie für jede Tätigkeit bei Brenner Federtechnik, ob sie ein Projekt ist. Prüfen Sie dann und lesen Sie die Begründung.</p>
+      <div class="rows" id="a11"></div>
+      <div class="btns"><button class="btn" data-check="a11">Prüfen</button><span class="score" id="a11-score"></span></div>
+    </div>
+
+    <div class="sheet">
+      <div class="task-head"><h3>1.2 Das Vier-Phasen-Modell</h3><span class="tag">Lesen</span></div>
+      <p class="prose">Viele Unternehmen gliedern Projekte in vier Phasen. Jede Phase endet mit einem <b>Ergebnis</b>, das vorliegen muss, bevor die nächste Phase sinnvoll beginnen kann.</p>
+      <div class="phases">
+        <div class="phase"><span class="ph-n">1</span><h3>Definition</h3>
+          <ul><li>Ausgangslage und Problem analysieren</li><li>Ziele formulieren</li><li>Lösungskonzept entwerfen</li><li>Projektorganisation einrichten, Kick-off</li></ul>
+          <p class="result"><b>Ergebnis</b>Projektauftrag bzw. Projektvereinbarung: Auftraggeber und Team haben dieselbe Vorstellung vom Ziel</p></div>
+        <div class="phase"><span class="ph-n">2</span><h3>Planung</h3>
+          <ul><li>Arbeitspakete bilden</li><li>Projektstrukturplan (PSP)</li><li>Ablauf- und Terminplan, Meilensteine</li><li>Ressourcen- und Kostenplan</li></ul>
+          <p class="result"><b>Ergebnis</b>Genehmigte Pläne: wer macht was, bis wann, mit welchen Mitteln</p></div>
+        <div class="phase"><span class="ph-n">3</span><h3>Durchführung</h3>
+          <ul><li>Planung ausführen</li><li>Soll-Ist-Vergleich, nachsteuern</li><li>Team koordinieren und motivieren</li><li>Änderungen und Nachforderungen managen</li></ul>
+          <p class="result"><b>Ergebnis</b>Fertiges Projektergebnis, dokumentiert im Protokoll</p></div>
+        <div class="phase"><span class="ph-n">4</span><h3>Abschluss</h3>
+          <ul><li>Ergebnis präsentieren und übergeben</li><li>Abnahme sicherstellen</li><li>Projekt reflektieren (Lessons Learned)</li><li>Team auflösen</li></ul>
+          <p class="result"><b>Ergebnis</b>Abnahmeprotokoll, Abschlussbericht, Erfahrungen für das nächste Projekt</p></div>
+      </div>
+      <p class="muted" style="font-size:.9rem">Wichtig: Die Phasen laufen nacheinander ab, aber Pläne sind nicht in Stein gemeißelt. In der Durchführung wird die Planung laufend überprüft und angepasst.</p>
+    </div>
+
+    <div class="sheet">
+      <div class="task-head"><h3>1.3 Das Projekttagebuch von FKP-1</h3><span class="tag">Zuordnen</span></div>
+      <p><b>Auftrag:</b> Die Einträge stammen aus dem Projekttagebuch von Lea Sommer, sind aber durcheinandergeraten. Ordnen Sie jedem Eintrag die Phase zu.</p>
+      <div class="rows" id="a13"></div>
+      <div class="btns"><button class="btn" data-check="a13">Prüfen</button><span class="score" id="a13-score"></span></div>
+    </div>
+
+    <div class="sheet">
+      <div class="task-head"><h3>1.4 Fehlerdetektiv: Die Start-E-Mail</h3><span class="tag">Fehler finden</span></div>
+      <p><b>Auftrag:</b> Lea Sommer hat ihrem Team zum Projektstart geschrieben. In der E-Mail stecken <b>drei Aussagen</b>, die dem Vier-Phasen-Modell widersprechen. Klicken Sie diese Sätze an und werten Sie dann aus.</p>
+      <div class="mail">
+        <header><span>Von: L. Sommer · An: Team FKP-1</span><span>Betreff: Start Prüfstand FKP-1</span></header>
+        <div class="body" id="detective"></div>
+      </div>
+      <div class="btns"><button class="btn" id="det-check">Auswerten</button><button class="btn ghost" id="det-reset">Zurücksetzen</button><span class="score" id="det-score"></span></div>
+      <label class="f">Schreiben Sie Satz 3 so um, dass er zum Vier-Phasen-Modell passt.
+        <textarea data-save="s1_satz3" id="s1_satz3" placeholder="Bevor wir bestellen, …"></textarea></label>
+    </div>
+
+    <div class="nextbar"><button class="btn ghost" data-go="uebersicht">Zurück</button><button class="btn" data-go="stufe2">Weiter zu Stufe 2</button></div>
+  </section>
+
+  <!-- STUFE 2 -->
+  <section class="panel" id="stufe2" role="tabpanel" aria-labelledby="t-stufe2" hidden>
+    <div class="intro">
+      <span class="label">Stufe 2 · Einzel- oder Partnerarbeit · ca. 60 min</span>
+      <h2>Zielkonflikte im Musterfall lösen</h2>
+    </div>
+
+    <div class="sheet">
+      <div class="task-head"><h3>2.1 Das magische Dreieck</h3><span class="tag">Lesen</span></div>
+      <div class="tri-wrap">
+        <div class="tri" aria-hidden="true">
+          <svg viewBox="0 0 260 230">
+            <polygon class="body" points="130,30 30,195 230,195"/>
+            <polygon class="edge" points="130,30 30,195 230,195"/>
+            <text x="130" y="140" text-anchor="middle" style="font-family:var(--f-display);font-size:18px;font-weight:700">FKP-1</text>
+            <text x="130" y="16" text-anchor="middle">QUALITÄT</text>
+            <text x="30" y="222" text-anchor="middle">ZEIT</text>
+            <text x="230" y="222" text-anchor="middle">KOSTEN</text>
+          </svg>
+        </div>
+        <div class="prose">
+          <p>Jedes Projekt hat drei Zielgrößen, die sich gegenseitig beeinflussen:</p>
+          <ul>
+            <li><b>Qualität (Leistung)</b>: Was muss das Ergebnis können? Bei FKP-1: Messgenauigkeit ±1 %, Prüfzeit ≤ 45 s.</li>
+            <li><b>Zeit</b>: Bis wann muss es fertig sein? Bei FKP-1: Inbetriebnahme bis 30.06.</li>
+            <li><b>Kosten</b>: Wie viel darf es kosten? Bei FKP-1: 38.000 €.</li>
+          </ul>
+          <p>Ändert sich eine Größe, geraten die anderen unter Druck. Das nennt man <b>Zielkonflikt</b>. Die Projektleitung kann nicht alle drei Größen gleichzeitig halten. Sie bereitet deshalb Varianten vor und macht sichtbar, welche Größe jeweils nachgibt. Entscheiden muss dann der Auftraggeber.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="sheet">
+      <div class="task-head"><h3>2.2 Störfall: Die Kraftmessdose kommt zu spät</h3><span class="tag">Entscheiden</span></div>
+      <div class="case"><p><b>Montag, 12. Mai.</b> Der Lieferant meldet 5 Wochen Lieferverzug für die Kraftmessdose, das Herzstück des Prüfstands. Damit ist der Termin 30.06. nicht zu halten. Lea Sommer hat drei Varianten ausgearbeitet.</p></div>
+      <div class="tri-wrap">
+        <div class="tri">
+          <svg viewBox="0 0 260 230" role="img" aria-label="Magisches Dreieck: die belastete Zielgröße ist rot markiert">
+            <polygon class="body" points="130,30 30,195 230,195"/>
+            <polygon class="edge" points="130,30 30,195 230,195"/>
+            <circle class="corner" data-corner="q" cx="130" cy="30" r="11"/>
+            <circle class="corner" data-corner="z" cx="30" cy="195" r="11"/>
+            <circle class="corner" data-corner="k" cx="230" cy="195" r="11"/>
+            <text x="130" y="12" text-anchor="middle">QUALITÄT</text>
+            <text x="30" y="222" text-anchor="middle">ZEIT</text>
+            <text x="230" y="222" text-anchor="middle">KOSTEN</text>
+            <text id="tri-note" x="130" y="140" text-anchor="middle">Variante wählen</text>
+          </svg>
+        </div>
+        <div class="opts" id="stoerfall">
+          <label class="opt"><input type="radio" name="sf" value="a" data-save="s2_variante"><span><b>A: Anderer Hersteller, Expresslieferung</b><small>Gleiche Genauigkeit, Lieferung in 1 Woche, Mehrkosten 2.400 €</small></span></label>
+          <label class="opt"><input type="radio" name="sf" value="b" data-save="s2_variante"><span><b>B: Günstigere Messdose ab Lager</b><small>Sofort lieferbar, kostenneutral, Genauigkeit nur ±2 %</small></span></label>
+          <label class="opt"><input type="radio" name="sf" value="c" data-save="s2_variante"><span><b>C: Auf die bestellte Messdose warten</b><small>Keine Mehrkosten, volle Genauigkeit, Inbetriebnahme erst Anfang August</small></span></label>
+        </div>
+      </div>
+      <label class="f">Welche Variante empfehlen Sie Dr. Kraus? Begründen Sie mit den Projektzielen aus dem Musterfall.
+        <span class="hint">Gehen Sie darauf ein, welche Zielgröße nachgibt und warum das hier am ehesten vertretbar ist.</span>
+        <textarea data-save="s2_empfehlung" id="s2_empfehlung"></textarea></label>
+      <details class="eh" id="sf-eh"><summary>Musterüberlegung anzeigen (erst nach Ihrer Begründung)</summary>
+        <div class="inner">
+          <p><b>Variante B</b> scheidet meist aus: Die Genauigkeit ist der Kern des Projekts. Die Reklamationen entstehen gerade wegen falscher Federraten. Ein Prüfstand mit ±2 % verfehlt das Hauptziel.</p>
+          <p><b>Variante C</b> ist problematisch, weil der Termin 30.06. an den Serienanlauf des Neukunden gebunden ist. Hier gibt die Zeit nach, und das hat Folgen außerhalb des Projekts.</p>
+          <p><b>Variante A</b> ist daher meist die vertretbare Lösung: 2.400 € entsprechen gut 6 % des Budgets. Voraussetzung ist, dass es eine Budgetreserve gibt oder der Auftraggeber die Mehrkosten freigibt.</p>
+          <p><b>Entscheidend ist die Rolle:</b> Die Projektleitung empfiehlt, der Auftraggeber entscheidet. Andere Empfehlungen sind richtig, wenn sie schlüssig mit den Projektzielen begründet sind.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="sheet">
+      <div class="task-head"><h3>2.3 Welcher Konflikt liegt vor?</h3><span class="tag">Zuordnen</span></div>
+      <p><b>Auftrag:</b> Bestimmen Sie für jede Situation aus dem Projekt FKP-1, welche zwei Zielgrößen im Konflikt stehen.</p>
+      <div class="rows" id="a23"></div>
+      <div class="btns"><button class="btn" data-check="a23">Prüfen</button><span class="score" id="a23-score"></span></div>
+    </div>
+
+    <div class="sheet">
+      <div class="task-head"><h3>2.4 Probe-Kurzarbeit</h3><span class="tag ln">so sieht der Leistungsnachweis aus</span></div>
+      <div class="case">
+        <p><b>Fall:</b> Die Hofmann Drehteile GmbH rüstet eine CNC-Drehzelle mit einem Stangenlader nach, damit die Maschine auch in der Nachtschicht mannlos läuft. Budget 55.000 €, Inbetriebnahme bis Ende der Betriebsferien am 25.08.</p>
+      </div>
+      <label class="f">a) Ordnen Sie die Tätigkeiten den Projektphasen zu und begründen Sie jeweils kurz: (1) Probelauf mit Abnahme durch den Fertigungsleiter, (2) Klären, welche Stangendurchmesser verarbeitet werden müssen, (3) Festlegen, bis wann die Schutzeinhausung konstruiert sein muss. <span class="hint">3 Punkte</span>
+        <textarea data-save="s2_ka_a" id="s2_ka_a"></textarea></label>
+      <label class="f">b) Der Hersteller liefert den Stangenlader erst zwei Wochen nach den Betriebsferien. Benennen Sie den Zielkonflikt, zeigen Sie zwei Lösungswege mit ihren Folgen auf und geben Sie eine begründete Empfehlung. <span class="hint">5 Punkte</span>
+        <textarea data-save="s2_ka_b" id="s2_ka_b"></textarea></label>
+      <details class="eh"><summary>Erwartungshorizont anzeigen (erst nach Bearbeitung)</summary>
+        <div class="inner tablewrap">
+          <table>
+            <tr><th>Teil</th><th>Erwartete Leistung</th><th>Punkte</th></tr>
+            <tr><td>a) (1)</td><td>Abschluss: Ergebnis wird übergeben und abgenommen</td><td class="p">1</td></tr>
+            <tr><td>a) (2)</td><td>Definition: Anforderungen bzw. Ziele werden geklärt</td><td class="p">1</td></tr>
+            <tr><td>a) (3)</td><td>Planung: Termin- bzw. Meilensteinplanung</td><td class="p">1</td></tr>
+            <tr><td>b)</td><td>Konflikt Zeit ↔ Kosten (oder Zeit ↔ Qualität) korrekt benannt</td><td class="p">1</td></tr>
+            <tr><td>b)</td><td>Lösungsweg 1 mit Folge, z. B. Expressmontage oder Wochenendarbeit → Kosten steigen</td><td class="p">1</td></tr>
+            <tr><td>b)</td><td>Lösungsweg 2 mit Folge, z. B. Inbetriebnahme im laufenden Betrieb verschieben → Zeit bzw. Produktionsausfall</td><td class="p">1</td></tr>
+            <tr><td>b)</td><td>Empfehlung schlüssig mit den Projektzielen begründet</td><td class="p">1</td></tr>
+            <tr><td>b)</td><td>Rolle benannt: Projektleitung empfiehlt, Auftraggeber entscheidet</td><td class="p">1</td></tr>
+          </table>
+        </div>
+      </details>
+    </div>
+
+    <div class="nextbar"><button class="btn ghost" data-go="stufe1">Zurück</button><button class="btn" data-go="stufe3">Weiter zu Stufe 3</button></div>
+  </section>
+
+  <!-- STUFE 3 -->
+  <section class="panel" id="stufe3" role="tabpanel" aria-labelledby="t-stufe3" hidden>
+    <div class="intro">
+      <span class="label">Stufe 3 · Teamarbeit · ca. 90 min</span>
+      <h2>Übertragen auf Ihr Robo-Sumo-Projekt</h2>
+      <p>Jetzt ist Ihr Team die Projektleitung. Was Sie hier erarbeiten, reichen Sie bei Gate G1 ein. Es fließt später in Ihre Projektvereinbarung (PM_02) ein.</p>
+    </div>
+
+    <div class="sheet">
+      <label class="f">Teamname (Ihr Start-up)
+        <input type="text" data-save="teamname" id="teamname" placeholder="z. B. Pushbot Engineering"></label>
+    </div>
+
+    <div class="sheet">
+      <div class="task-head"><h3>3.1 Unser Phasenfahrplan</h3><span class="tag team">Teambaustein</span></div>
+      <p><b>Auftrag:</b> Beschreiben Sie für jede Phase, was in Ihrem Projekt konkret passiert, in welchem Zeitraum und welches Ergebnis am Ende steht. Nutzen Sie den Jahresplan aus dem Präsenzunterricht.</p>
+      <div class="tablewrap">
+        <table class="tp">
+          <tr><th>Phase</th><th>Was passiert bei uns?</th><th>Zeitraum</th><th>Ergebnis / Dokument am Ende</th></tr>
+          <tr><td>Definition</td><td><textarea data-save="p1_was" id="p1_was"></textarea></td><td><textarea data-save="p1_zeit" id="p1_zeit"></textarea></td><td><textarea data-save="p1_erg" id="p1_erg"></textarea></td></tr>
+          <tr><td>Planung</td><td><textarea data-save="p2_was" id="p2_was"></textarea></td><td><textarea data-save="p2_zeit" id="p2_zeit"></textarea></td><td><textarea data-save="p2_erg" id="p2_erg"></textarea></td></tr>
+          <tr><td>Durchführung</td><td><textarea data-save="p3_was" id="p3_was"></textarea></td><td><textarea data-save="p3_zeit" id="p3_zeit"></textarea></td><td><textarea data-save="p3_erg" id="p3_erg"></textarea></td></tr>
+          <tr><td>Abschluss</td><td><textarea data-save="p4_was" id="p4_was"></textarea></td><td><textarea data-save="p4_zeit" id="p4_zeit"></textarea></td><td><textarea data-save="p4_erg" id="p4_erg"></textarea></td></tr>
+        </table>
+      </div>
+      <details><summary>Tipp, wenn Sie nicht weiterkommen</summary>
+        <div class="inner"><p>Die Bauphase beginnt im Januar. Vor Ostern soll der Roboter fahren und die Ringkante erkennen, vor Pfingsten soll er vollständig funktionieren. Überlegen Sie: Was muss vor dem ersten Bautag geklärt und geplant sein? Und was passiert nach dem Turnier noch?</p></div>
+      </details>
+    </div>
+
+    <div class="sheet">
+      <div class="task-head"><h3>3.2 Unser magisches Dreieck</h3><span class="tag team">Teambaustein</span></div>
+      <p><b>Auftrag:</b> Was bedeuten die drei Zielgrößen konkret für Ihren Sumo-Roboter? Nennen Sie jeweils mindestens eine messbare Angabe.</p>
+      <label class="f">Qualität (Leistung)<span class="hint">Welche Anforderungen muss der Roboter erfüllen? Denken Sie an die Wettkampfregeln.</span><textarea data-save="d_q" id="d_q"></textarea></label>
+      <label class="f">Zeit<span class="hint">Welche festen Termine gibt es?</span><textarea data-save="d_z" id="d_z"></textarea></label>
+      <label class="f">Kosten<span class="hint">Welche Mittel sind begrenzt? Nicht nur Geld: auch Druckerzeit, Material, Arbeitsstunden.</span><textarea data-save="d_k" id="d_k"></textarea></label>
+    </div>
+
+    <div class="sheet">
+      <div class="task-head"><h3>3.3 Ein Zielkonflikt, der uns treffen könnte</h3><span class="tag team">Teambaustein</span></div>
+      <p><b>Auftrag:</b> Beschreiben Sie einen realistischen Zielkonflikt für Ihr Projekt und lösen Sie ihn so, wie Lea Sommer es im Störfall getan hat.</p>
+      <label class="f">Situation<span class="hint">Was passiert, wann, mit welcher Auswirkung?</span><textarea data-save="k_sit" id="k_sit"></textarea></label>
+      <label class="f">Betroffene Zielgrößen
+        <select data-save="k_ecken" id="k_ecken"><option value="">bitte wählen</option><option>Zeit ↔ Kosten</option><option>Kosten ↔ Qualität</option><option>Zeit ↔ Qualität</option></select></label>
+      <label class="f">Lösungsweg 1 und seine Folge<textarea data-save="k_l1" id="k_l1"></textarea></label>
+      <label class="f">Lösungsweg 2 und seine Folge<textarea data-save="k_l2" id="k_l2"></textarea></label>
+      <label class="f">Unsere Empfehlung mit Begründung. Wer entscheidet?<textarea data-save="k_emp" id="k_emp"></textarea></label>
+    </div>
+
+    <div class="nextbar"><button class="btn ghost" data-go="stufe2">Zurück</button><button class="btn" data-go="gate">Zur Freigabe G1</button></div>
+  </section>
+
+  <!-- GATE -->
+  <section class="panel" id="gate" role="tabpanel" aria-labelledby="t-gate" hidden>
+    <div class="intro">
+      <span class="label">Gate G1 · Abnahme im Präsenzunterricht</span>
+      <h2>Freigabe beantragen</h2>
+      <p>Wie im echten Projekt geht es erst weiter, wenn der Auftraggeber die Freigabe gibt. Prüfen Sie Ihre Ergebnisse mit der Checkliste. Genau diese Punkte prüft auch die Lehrkraft.</p>
+    </div>
+
+    <div class="sheet">
+      <div class="task-head"><h3>Checkliste für die Freigabe</h3></div>
+      <div class="checks">
+        <label><input type="checkbox" data-save="c1" id="c1"><span>Alle vier Phasen sind mit konkreten Tätigkeiten aus <b>unserem</b> Projekt beschrieben, nicht allgemein.</span></label>
+        <label><input type="checkbox" data-save="c2" id="c2"><span>Jede Phase hat einen Zeitraum, der zum Jahresplan passt.</span></label>
+        <label><input type="checkbox" data-save="c3" id="c3"><span>Jede Phase endet mit einem benannten Ergebnis oder Dokument.</span></label>
+        <label><input type="checkbox" data-save="c4" id="c4"><span>Zeit, Kosten und Qualität sind mit mindestens einer messbaren Angabe beschrieben.</span></label>
+        <label><input type="checkbox" data-save="c5" id="c5"><span>Der Zielkonflikt nennt zwei Lösungswege mit Folgen, eine begründete Empfehlung und wer entscheidet.</span></label>
+      </div>
+    </div>
+
+    <div class="sheet">
+      <div class="task-head"><h3>Ergebnisse speichern und einreichen</h3></div>
+      <p>Speichern Sie Ihre Ergebnisse als Datei und laden Sie sie in den Abgabeordner hoch. Die Lehrkraft nimmt am Donnerstag im Präsenzunterricht ab: Ein Teammitglied stellt den Phasenfahrplan in 3 Minuten vor.</p>
+      <label class="f">Namen der Teammitglieder (erscheinen nur in Ihrer Datei)
+        <input type="text" data-save="namen" id="namen"></label>
+      <div class="btns">
+        <button class="btn stamp" id="export">Ergebnisse als Datei speichern</button>
+        <button class="btn ghost" id="copy">Text kopieren</button>
+      </div>
+      <div id="export-msg" hidden></div>
+      <textarea id="copy-fallback" hidden readonly style="min-height:160px"></textarea>
+      <span class="stampmark" aria-hidden="true">FREIGABE G1</span>
+    </div>
+    <div class="nextbar"><button class="btn ghost" data-go="stufe3">Zurück</button><span class="muted" style="font-size:.9rem">Nächstes Modul: PM_02 Definitionsphase</span></div>
+  </section>
+</div>
+
+<script>
+(function(){
+  const PH = ["Definition","Planung","Durchführung","Abschluss"];
+  const store = {
+    get(k){try{return localStorage.getItem("pmw_"+k)}catch(e){return null}},
+    set(k,v){try{localStorage.setItem("pmw_"+k,v)}catch(e){}}
+  };
+
+  const TASKS = {
+    a11:{opts:["Projekt","Routine"],items:[
+      ["Täglich werden 20.000 Druckfedern gewickelt und angelassen.","Routine","Wiederholt sich jeden Tag, hat keinen Endtermin: Linienaufgabe."],
+      ["Ein automatischer Prüfstand für Federkennlinien wird entwickelt und gebaut.","Projekt","Einmalig, klares Ziel, Endtermin 30.06., begrenztes Budget: ein Projekt."],
+      ["Die Federwindemaschine wird jede Woche gewartet.","Routine","Wiederkehrende Instandhaltung nach Plan ist Routine."],
+      ["Die Wickelei zieht bis Jahresende in eine neue Halle um.","Projekt","Einmalig, fester Endtermin, viele Beteiligte: ein typisches Projekt."],
+      ["Ein Team baut bis Juni einen Sumo-Roboter für ein Turnier.","Projekt","Einmalig, festes Ziel, fester Termin, begrenzte Mittel: Ihr eigenes Projekt."]
+    ]},
+    a13:{opts:PH,items:[
+      ["Ausgangslage aufgenommen: Handprüfung dauert 4 min je Feder, 3 % Reklamationen.","Definition","Die Analyse der Ausgangslage steht am Anfang der Definitionsphase."],
+      ["Wöchentlicher Soll-Ist-Vergleich: Konstruktion liegt 1 Woche hinter Plan.","Durchführung","Soll-Ist-Vergleich und Nachsteuern sind Aufgaben der Durchführung."],
+      ["Alle Tätigkeiten zu Arbeitspaketen zusammengefasst und im PSP geordnet.","Planung","Arbeitspakete und PSP sind die ersten Schritte der Planung."],
+      ["Team trifft sich zur Rückschau: Was machen wir beim nächsten Prüfstand anders?","Abschluss","Lessons Learned gehören in den Abschluss."],
+      ["Projektauftrag unterschrieben: ±1 %, 38.000 €, fertig bis 30.06.","Definition","Der unterschriebene Projektauftrag schließt die Definitionsphase ab."],
+      ["Meilenstein festgelegt: Konstruktion freigegeben bis 15.02.","Planung","Meilensteine werden im Ablauf- und Terminplan festgelegt."],
+      ["Grundrahmen wird geschweißt, Linearachse montiert.","Durchführung","Hier wird die Planung ausgeführt."],
+      ["Übergabe an die Qualitätssicherung mit Abnahmeprotokoll.","Abschluss","Übergabe und Abnahme des Ergebnisses beenden das Projekt."],
+      ["Kick-off-Meeting: Rollen im Team und Ansprechpartner festgelegt.","Definition","Projektorganisation und Kick-off gehören zur Definition."]
+    ]},
+    a23:{opts:["Zeit ↔ Kosten","Kosten ↔ Qualität","Zeit ↔ Qualität"],items:[
+      ["Der Konstrukteur fällt 3 Wochen aus. Ein externes Ingenieurbüro könnte sofort einspringen, für 3.100 €.","Zeit ↔ Kosten","Den Termin halten kostet Geld; Geld sparen kostet Zeit."],
+      ["Das Budget ist fast aufgebraucht, die vorgeschriebene Schutzhaube fehlt noch.","Kosten ↔ Qualität","Ohne Schutzhaube erfüllt der Prüfstand die Anforderungen nicht. Sie kostet aber Geld, das fehlt."],
+      ["Der Kunde möchte zusätzlich Zugfedern prüfen lassen. Der Endtermin 30.06. soll bleiben.","Zeit ↔ Qualität","Mehr Leistung (Nachforderung) bei gleichem Termin: Leistung und Zeit stehen im Konflikt."]
+    ]}
+  };
+
+  function buildRows(id){
+    const t=TASKS[id], box=document.getElementById(id);
+    t.items.forEach((it,i)=>{
+      const key=id+"_"+i, row=document.createElement("div");
+      row.className="row";
+      row.innerHTML=`<div class="txt">${it[0]}</div><select id="${key}" data-save="${key}" aria-label="Zuordnung"><option value="">bitte wählen</option>${t.opts.map(o=>`<option>${o}</option>`).join("")}</select><div class="fb" hidden></div>`;
+      box.appendChild(row);
+    });
+  }
+  function check(id){
+    const t=TASKS[id]; let ok=0;
+    t.items.forEach((it,i)=>{
+      const sel=document.getElementById(id+"_"+i), row=sel.closest(".row"), fb=row.querySelector(".fb");
+      row.classList.remove("ok","bad");
+      if(!sel.value){fb.hidden=true;return}
+      const right=sel.value===it[1]; if(right)ok++;
+      row.classList.add(right?"ok":"bad");
+      fb.hidden=false;
+      fb.textContent=(right?"Richtig. ":"Noch nicht. Richtig wäre: "+it[1]+". ")+it[2];
+    });
+    const s=`${ok} von ${t.items.length} richtig`;
+    document.getElementById(id+"-score").textContent=s;
+    store.set(id+"_score",s);
+  }
+  Object.keys(TASKS).forEach(buildRows);
+
+  // detective
+  const SENT=[
+    ["Hallo zusammen, ab heute starten wir offiziell das Projekt FKP-1.",false],
+    ["Dr. Kraus hat den Projektauftrag mit Ziel, Budget und Endtermin unterschrieben.",false],
+    ["Damit wir schnell sind, bestellt Tim heute schon den Servoantrieb. Welche Arbeitspakete es genau gibt, klären wir nebenbei.",true,"Hier wird Durchführung vor Planung gesetzt. Ohne Arbeitspakete, Ressourcen- und Kostenplan ist unklar, ob der Antrieb überhaupt passt und ins Budget fällt."],
+    ["Bis Freitag schreibt jeder die Tätigkeiten aus seinem Bereich auf. Daraus bauen wir die Arbeitspakete und den Projektstrukturplan.",false],
+    ["Sobald der Terminplan steht, ist er fix. Änderungen während der Durchführung gibt es nicht.",true,"In der Durchführung wird laufend Soll und Ist verglichen und nachgesteuert. Änderungen werden gemanagt, nicht verboten."],
+    ["Jeden Montag machen wir einen kurzen Soll-Ist-Abgleich.",false],
+    ["Nach der Übergabe an die QS lösen wir das Team sofort auf. Eine Rückschau brauchen wir nicht, das kostet nur Zeit.",true,"Zum Abschluss gehören Dokumentation und Reflexion (Lessons Learned). Ohne sie wiederholt das nächste Projekt dieselben Fehler."],
+    ["Viele Grüße, Lea",false]
+  ];
+  const det=document.getElementById("detective");
+  const flagged=new Set((store.get("det_flags")||"").split(",").filter(Boolean).map(Number));
+  SENT.forEach((s,i)=>{
+    const b=document.createElement("button");
+    b.type="button"; b.className="sent"+(flagged.has(i)?" flag":""); b.dataset.i=i;
+    b.setAttribute("aria-pressed",flagged.has(i));
+    b.innerHTML=`<span class="sn">${i+1}</span>${s[0]}`;
+    b.addEventListener("click",()=>{
+      if(flagged.has(i))flagged.delete(i);else flagged.add(i);
+      b.classList.toggle("flag",flagged.has(i)); b.setAttribute("aria-pressed",flagged.has(i));
+      store.set("det_flags",[...flagged].join(","));
+    });
+    det.appendChild(b);
+    const ex=document.createElement("div"); ex.className="explain"; ex.hidden=true; ex.id="ex"+i; det.appendChild(ex);
+  });
+  document.getElementById("det-check").addEventListener("click",()=>{
+    let hit=0,wrong=0;
+    SENT.forEach((s,i)=>{
+      const b=det.querySelector(`[data-i="${i}"]`), ex=document.getElementById("ex"+i);
+      b.classList.remove("hit","miss","false");
+      ex.hidden=true;
+      if(s[1]&&flagged.has(i)){b.classList.add("hit");hit++;ex.hidden=false;ex.textContent="Gefunden. "+s[2]}
+      else if(s[1]){b.classList.add("miss");ex.hidden=false;ex.textContent="Übersehen. "+s[2]}
+      else if(flagged.has(i)){b.classList.add("false");wrong++;ex.hidden=false;ex.textContent="Dieser Satz passt zum Vier-Phasen-Modell."}
+    });
+    const s=`${hit} von 3 Fehlern gefunden`+(wrong?`, ${wrong} Satz fälschlich markiert`:"");
+    document.getElementById("det-score").textContent=s; store.set("det_score",s);
+  });
+  document.getElementById("det-reset").addEventListener("click",()=>{
+    flagged.clear(); store.set("det_flags","");
+    det.querySelectorAll(".sent").forEach(b=>{b.className="sent";b.setAttribute("aria-pressed","false")});
+    det.querySelectorAll(".explain").forEach(e=>e.hidden=true);
+    document.getElementById("det-score").textContent="";
+  });
+
+  // triangle
+  const CORNER={a:["k","Kosten steigen"],b:["q","Qualität sinkt"],c:["z","Termin verschiebt sich"]};
+  function tri(v){
+    document.querySelectorAll('[data-corner]').forEach(c=>c.classList.toggle("hit",CORNER[v]&&c.dataset.corner===CORNER[v][0]));
+    document.getElementById("tri-note").textContent=CORNER[v]?CORNER[v][1]:"Variante wählen";
+  }
+  document.querySelectorAll('input[name="sf"]').forEach(r=>r.addEventListener("change",()=>tri(r.value)));
+
+  // persistence
+  document.querySelectorAll("[data-save]").forEach(el=>{
+    const k=el.dataset.save, v=store.get(k);
+    if(el.type==="radio"){ if(v===el.value){el.checked=true;tri(v)} el.addEventListener("change",()=>store.set(k,el.value)); return;}
+    if(el.type==="checkbox"){ el.checked=v==="1"; el.addEventListener("change",()=>store.set(k,el.checked?"1":"0")); return;}
+    if(v!==null) el.value=v;
+    el.addEventListener("input",()=>store.set(k,el.value));
+    el.addEventListener("change",()=>store.set(k,el.value));
+  });
+  ["a11","a13","a23"].forEach(id=>{const s=store.get(id+"_score"); if(s)document.getElementById(id+"-score").textContent=s});
+  const ds=store.get("det_score"); if(ds)document.getElementById("det-score").textContent=ds;
+
+  // tabs
+  const tabs=[...document.querySelectorAll('[role="tab"]')];
+  function show(name,scroll){
+    if(!document.getElementById(name))name="uebersicht";
+    document.querySelectorAll('[role="tabpanel"]').forEach(p=>p.hidden=p.id!==name);
+    tabs.forEach(t=>{const on=t.dataset.tab===name;t.setAttribute("aria-selected",on);t.tabIndex=on?0:-1});
+    store.set("tab",name);
+    if(scroll)document.querySelector(".tabs").scrollIntoView({block:"start",behavior:"smooth"});
+  }
+  tabs.forEach(t=>t.addEventListener("click",()=>show(t.dataset.tab,false)));
+  document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>show(b.dataset.go,true)));
+  document.querySelectorAll("[data-check]").forEach(b=>b.addEventListener("click",()=>check(b.dataset.check)));
+  const h=(location.hash||"").slice(1);
+  show(h&&document.getElementById(h)?h:(store.get("tab")||"uebersicht"),false);
+
+  // export
+  const esc=s=>String(s??"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  const val=id=>{const e=document.getElementById(id);return e?e.value.trim():""};
+  function collect(){
+    const team=val("teamname")||"Team ohne Namen";
+    const variante={a:"A – Expresslieferung",b:"B – Günstigere Messdose",c:"C – Warten"}[store.get("s2_variante")]||"–";
+    const checks=["c1","c2","c3","c4","c5"].filter(c=>document.getElementById(c).checked).length;
+    const sec=[
+      ["Stufe 1 – Musterfall",[
+        ["1.1 Projekt oder Routine",store.get("a11_score")||"nicht geprüft"],
+        ["1.3 Projekttagebuch",store.get("a13_score")||"nicht geprüft"],
+        ["1.4 Fehlerdetektiv",store.get("det_score")||"nicht ausgewertet"],
+        ["Satz 3 umformuliert",val("s1_satz3")]]],
+      ["Stufe 2 – Zielkonflikte",[
+        ["2.2 Gewählte Variante",variante],["2.2 Empfehlung",val("s2_empfehlung")],
+        ["2.3 Konflikte",store.get("a23_score")||"nicht geprüft"],
+        ["2.4 Probe-KA a)",val("s2_ka_a")],["2.4 Probe-KA b)",val("s2_ka_b")]]],
+      ["Stufe 3 – Phasenfahrplan "+team,[
+        ...PH.map((p,i)=>[p,`Was: ${val("p"+(i+1)+"_was")}\nZeitraum: ${val("p"+(i+1)+"_zeit")}\nErgebnis: ${val("p"+(i+1)+"_erg")}`]),
+        ["Qualität",val("d_q")],["Zeit",val("d_z")],["Kosten",val("d_k")],
+        ["Zielkonflikt – Situation",val("k_sit")],["Betroffene Größen",val("k_ecken")],
+        ["Lösungsweg 1",val("k_l1")],["Lösungsweg 2",val("k_l2")],["Empfehlung",val("k_emp")]]],
+      ["Gate G1",[["Selbstcheck",checks+" von 5 Punkten erfüllt"],["Teammitglieder",val("namen")]]]
+    ];
+    return {team,sec};
+  }
+  function asHtml(d){
+    const date=new Date().toLocaleDateString("de-DE");
+    return `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>PM_01 Gate G1 – ${esc(d.team)}</title><style>body{font-family:Arial,sans-serif;max-width:800px;margin:30px auto;padding:0 16px;color:#1b262d}h1{font-size:22px;border-bottom:2px solid #1b262d;padding-bottom:6px}h2{font-size:17px;margin-top:26px;color:#0e6b6b}table{border-collapse:collapse;width:100%}td{border:1px solid #c9d2d5;padding:6px 8px;vertical-align:top;white-space:pre-wrap}td:first-child{width:30%;font-weight:bold;background:#f2f5f4}.f{margin-top:30px;border:2px dashed #b3261e;padding:10px}</style></head><body><h1>PM_01 · Gate G1 · ${esc(d.team)}</h1><p>Erstellt am ${date} · PM-Werkstatt Robo-Sumo</p>${d.sec.map(s=>`<h2>${esc(s[0])}</h2><table>${s[1].map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])||"–"}</td></tr>`).join("")}</table>`).join("")}<div class="f"><b>Freigabe durch Lehrkraft</b><br><br>☐ freigegeben &nbsp;&nbsp; ☐ nachbessern: ____________________<br><br>Datum / Kürzel: ____________</div></body></html>`;
+  }
+  function asText(d){
+    return `PM_01 · Gate G1 · ${d.team}\n`+d.sec.map(s=>`\n== ${s[0]} ==\n`+s[1].map(r=>`${r[0]}:\n${r[1]||"–"}`).join("\n\n")).join("\n");
+  }
+  const msg=document.getElementById("export-msg");
+  function say(t,ok){msg.hidden=false;msg.className="toast "+(ok?"ok":"bad");msg.textContent=t}
+  const exportBtn=document.getElementById("export");
+  exportBtn.addEventListener("click",()=>{
+    const d=collect();
+    try{
+      const fn=`PM01_G1_${d.team.replace(/[^\wÄÖÜäöüß-]+/g,"_")}.html`;
+      const blob=new Blob([asHtml(d)],{type:"text/html;charset=utf-8"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.href=url; a.download=fn; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),2000);
+      say(`Gespeichert als ${fn} (Ordner „Downloads“). Laden Sie die Datei in den Abgabeordner hoch.`,true);
+    }catch(e){
+      say("Speichern hat nicht geklappt. Nutzen Sie „Text kopieren“.",false);
+    }
+  });
+  document.getElementById("copy").addEventListener("click",()=>{
+    const t=asText(collect()), fb=document.getElementById("copy-fallback");
+    const fallback=()=>{fb.hidden=false;fb.value=t;fb.focus();fb.select();say("Text ist markiert. Kopieren Sie ihn mit Strg+C bzw. Cmd+C.",true)};
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(()=>say("Text kopiert. Fügen Sie ihn in Word oder OneNote ein.",true),fallback);
+    }else fallback();
+  });
+})();
+</script>
+
+</body>
+</html>

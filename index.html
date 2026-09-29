@@ -212,6 +212,12 @@ details.eh summary{color:var(--stamp)}
       <span class="label">Rudolf-Diesel-Fachschule · Projektmanagement · Roboter</span>
       <h1>PM-Werkstatt</h1>
       <p class="muted" style="max-width:60ch">Sie lernen Projektmanagement an einem Musterfall aus dem Maschinenbau und übertragen es Schritt für Schritt auf Ihr Roboter-Projekt. Am Ende jedes Moduls steht ein Stück Ihrer echten Projektdokumentation.</p>
+      <div class="btns">
+        <button type="button" class="btn ghost" id="snap-save">Zwischenstand sichern</button>
+        <button type="button" class="btn ghost" id="snap-load">Zwischenstand laden</button>
+        <input type="file" id="snap-file" accept=".html,.htm,.json" hidden>
+      </div>
+      <div id="snap-msg" hidden></div>
     </div>
     <div class="meta">
       <div><span class="label">Modul</span><b id="meta-mod">PM_01</b></div>
@@ -238,6 +244,11 @@ details.eh summary{color:var(--stamp)}
     </ol>
   </nav>
 
+  <div class="sheet" id="snap-banner" hidden style="margin-top:14px;border:2px solid var(--accent)">
+    <p id="snap-banner-text"></p>
+    <div class="btns"><button type="button" class="btn" id="snap-apply">Zwischenstand übernehmen</button><button type="button" class="btn ghost" id="snap-cancel">Abbrechen</button></div>
+  </div>
+
   <!-- ÜBERSICHT -->
   <section class="panel" id="uebersicht" data-mod="0" role="tabpanel" aria-labelledby="t-uebersicht">
     <div class="intro">
@@ -249,6 +260,19 @@ details.eh summary{color:var(--stamp)}
       <div><b>S2 Anwenden</b><span>Sie treffen Entscheidungen im Musterfall, begründen sie und übertragen sie auf einen neuen Fall.</span></div>
       <div><b>S3 Unser Roboter</b><span>Ihr Team erstellt einen Baustein der eigenen Projektdokumentation.</span></div>
       <div><b>Gate</b><span>Ein Partnerteam prüft Ihre Ergebnisse mit der Checkliste. Danach speichern Sie sie und geben sie in Teams ab.</span></div>
+    </div>
+
+    <div class="sheet">
+      <div class="task-head"><h3>Am Ende jeder Stunde: Zwischenstand sichern</h3></div>
+      <div class="prose">
+        <p>Ihre Eingaben bleiben nur in diesem Browser auf diesem Gerät. Damit Sie nächste Woche an einem anderen Gerät oder als anderes Teammitglied weiterarbeiten können:</p>
+        <ul>
+          <li><b>Letzte 2 Minuten der Stunde:</b> oben auf „Zwischenstand sichern“ klicken. Sie erhalten eine kleine Datei, z. B. <code>Zwischenstand_Teamname_08-10.html</code>.</li>
+          <li>Die Datei im Teams-Kanal Ihres Teams oder in OneDrive ablegen.</li>
+          <li><b>Weiterarbeiten:</b> die Datei doppelklicken. Der Kurs öffnet sich, und Sie bestätigen „Zwischenstand übernehmen“. Oder Sie öffnen den Kurs und wählen oben „Zwischenstand laden“.</li>
+        </ul>
+        <p class="muted" style="font-size:.9rem">Achtung: Beim Laden werden die Eingaben auf diesem Gerät durch den Zwischenstand ersetzt. Arbeiten Sie nicht im privaten Fenster (Inkognito), dort geht alles beim Schließen verloren.</p>
+      </div>
     </div>
 
     <div class="modgrid">
@@ -919,7 +943,7 @@ details.eh summary{color:var(--stamp)}
       ["Ein automatischer Prüfstand für Federkennlinien wird entwickelt und gebaut.","Projekt","Einmalig, klares Ziel, Endtermin 30.06., begrenztes Budget: ein Projekt."],
       ["Die Federwindemaschine wird jede Woche gewartet.","Routine","Wiederkehrende Instandhaltung nach Plan ist Routine."],
       ["Die Wickelei zieht bis Jahresende in eine neue Halle um.","Projekt","Einmalig, fester Endtermin, viele Beteiligte: ein typisches Projekt."],
-      ["Ein Team baut bis Juni einen Roboter für einen Wettbewerb.","Projekt","Einmalig, festes Ziel, fester Termin, begrenzte Mittel: Ihr eigenes Projekt."]
+      ["Ein Team baut bis Mai einen Roboter für einen Wettbewerb.","Projekt","Einmalig, festes Ziel, fester Termin, begrenzte Mittel: Ihr eigenes Projekt."]
     ]},
     a13:{opts:PH,items:[
       ["Ausgangslage aufgenommen: Handprüfung dauert 4 min je Feder, 3 % Reklamationen.","Definition","Die Analyse der Ausgangslage steht am Anfang der Definitionsphase."],
@@ -1162,6 +1186,85 @@ details.eh summary{color:var(--stamp)}
   }
   document.getElementById("export").addEventListener("click",()=>{const d=collect();doSave("export-msg",`PM01_G1_${safeName(d.team)}.html`,asHtml(d),"text/html;charset=utf-8")});
   document.getElementById("copy").addEventListener("click",()=>copyText(asText(collect()),"copy-fallback","export-msg"));
+
+  // Zwischenstand sichern / laden
+  const SNAP_VER=1;
+  function snapshot(){
+    const data={};
+    try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i); if(k&&k.startsWith("pmw_"))data[k.slice(4)]=localStorage.getItem(k)}}catch(e){}
+    document.querySelectorAll("[data-save]").forEach(el=>{
+      const k=el.dataset.save;
+      if(el.type==="radio"){if(el.checked)data[k]=el.value;return}
+      if(el.type==="checkbox"){data[k]=el.checked?"1":"0";return}
+      data[k]=el.value;
+    });
+    return {app:"pm-werkstatt",v:SNAP_VER,saved:new Date().toISOString(),team:val("m2_team")||val("teamname")||"",data};
+  }
+  const b64enc=str=>btoa(unescape(encodeURIComponent(str))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  const b64dec=b=>decodeURIComponent(escape(atob(b.replace(/-/g,"+").replace(/_/g,"/"))));
+  function launcherHtml(snap){
+    const json=JSON.stringify(snap), safe=json.replace(/</g,"\\u003c");
+    const base=location.hostname.endsWith("github.io")?location.origin+location.pathname:"";
+    const when=new Date(snap.saved).toLocaleString("de-DE",{dateStyle:"short",timeStyle:"short"});
+    const target=base?base+"#load="+b64enc(json):"";
+    return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Zwischenstand ${esc(snap.team||"")}</title><style>body{font-family:Arial,sans-serif;max-width:640px;margin:40px auto;padding:0 16px;color:#1b262d;line-height:1.5}h1{font-size:22px}a{color:#0e6b6b}</style></head><body><h1>PM-Werkstatt: Zwischenstand</h1><p>Team: ${esc(snap.team||"–")} · gesichert am ${esc(when)}</p>`+
+      (target?`<p>Der Kurs wird geöffnet …</p><p>Falls nichts passiert: <a href="${base}">Kurs öffnen</a>, oben „Zwischenstand laden“ wählen und diese Datei auswählen.</p>`:`<p>Öffnen Sie den Kurs, wählen Sie oben „Zwischenstand laden“ und dann diese Datei.</p>`)+
+      `<script type="application/json" id="pmw-data">${safe}<\/script>`+(target?`<script>location.replace(${JSON.stringify(target)})<\/script>`:"")+`</body></html>`;
+  }
+  let pendingSnap=null;
+  function offerSnap(snap,source){
+    if(!snap||snap.app!=="pm-werkstatt"||!snap.data){sayIn("snap-msg","Diese Datei ist kein Zwischenstand der PM-Werkstatt.",false);return}
+    pendingSnap=snap;
+    const when=new Date(snap.saved).toLocaleString("de-DE",{dateStyle:"short",timeStyle:"short"});
+    document.getElementById("snap-banner-text").innerHTML=`<b>Zwischenstand gefunden</b>${snap.team?" von „"+esc(snap.team)+"“":""}, gesichert am ${esc(when)}. Wenn Sie ihn übernehmen, werden die Eingaben auf diesem Gerät ersetzt.`;
+    const bn=document.getElementById("snap-banner"); bn.hidden=false; bn.scrollIntoView({block:"center"});
+  }
+  function applySnap(snap){
+    let ok=true;
+    try{
+      const old=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith("pmw_"))old.push(k)}
+      old.forEach(k=>localStorage.removeItem(k));
+      Object.entries(snap.data).forEach(([k,v])=>localStorage.setItem("pmw_"+k,v));
+      ok=localStorage.getItem("pmw_"+Object.keys(snap.data)[0])!==null||!Object.keys(snap.data).length;
+    }catch(e){ok=false}
+    if(ok){location.reload();return}
+    // ohne Browser-Speicher: direkt in die Felder schreiben
+    document.querySelectorAll("[data-save]").forEach(el=>{
+      const v=snap.data[el.dataset.save]; if(v===undefined)return;
+      if(el.type==="radio")el.checked=(el.value===v); else if(el.type==="checkbox")el.checked=(v==="1"); else el.value=v;
+    });
+    document.getElementById("snap-banner").hidden=true;
+    sayIn("snap-msg","Zwischenstand übernommen. Hinweis: Dieser Browser speichert nicht dauerhaft. Sichern Sie vor dem Schließen erneut.",true);
+  }
+  document.getElementById("snap-apply").addEventListener("click",()=>{if(pendingSnap)applySnap(pendingSnap)});
+  document.getElementById("snap-cancel").addEventListener("click",()=>{pendingSnap=null;document.getElementById("snap-banner").hidden=true});
+  document.getElementById("snap-save").addEventListener("click",()=>{
+    const snap=snapshot(), d=new Date(), dd=String(d.getDate()).padStart(2,"0")+"-"+String(d.getMonth()+1).padStart(2,"0");
+    doSave("snap-msg",`Zwischenstand_${safeName(snap.team||"Team")}_${dd}.html`,launcherHtml(snap),"text/html;charset=utf-8");
+  });
+  const snapFile=document.getElementById("snap-file");
+  document.getElementById("snap-load").addEventListener("click",()=>{snapFile.value="";snapFile.click()});
+  snapFile.addEventListener("change",()=>{
+    const f=snapFile.files&&snapFile.files[0]; if(!f)return;
+    const r=new FileReader();
+    r.onload=()=>{
+      let txt=String(r.result), snap=null;
+      try{
+        const m=txt.match(/<script type="application\/json" id="pmw-data">([\s\S]*?)<\/script>/);
+        snap=JSON.parse(m?m[1]:txt);
+      }catch(e){}
+      offerSnap(snap);
+    };
+    r.onerror=()=>sayIn("snap-msg","Die Datei konnte nicht gelesen werden.",false);
+    r.readAsText(f);
+  });
+  (function(){
+    const h=location.hash||"";
+    if(!h.startsWith("#load="))return;
+    let snap=null; try{snap=JSON.parse(b64dec(h.slice(6)))}catch(e){}
+    try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}
+    offerSnap(snap);
+  })();
 
   // PM_02: Projektvereinbarung
   function pvData(){

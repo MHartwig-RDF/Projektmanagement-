@@ -1,7 +1,7 @@
-# PM-Werkstatt Robo-Sumo
+# PM-Werkstatt Roboter
 
 Selbstlernkurs Projektmanagement für die Klasse MBT2528 (Rudolf-Diesel-Fachschule Nürnberg).
-Stand 26.09.2026 · Modul PM_01 fertig, PM_02 und PM_03 folgen.
+Stand 29.09.2026 · Module PM_01 und PM_02 fertig, PM_03 folgt. PM_02 erzeugt die Projektvereinbarung direkt als Word-Datei in der RDF-Vorlage.
 
 ## Veröffentlichen mit GitHub Pages
 
@@ -11,14 +11,14 @@ Stand 26.09.2026 · Modul PM_01 fertig, PM_02 und PM_03 folgen.
 4. Nach ca. 1 Minute ist der Kurs erreichbar unter `https://<benutzername>.github.io/pm-werkstatt/`.
 5. Für eine neue Version: `index.html` im Repository durch die neue Datei ersetzen. Der Link bleibt gleich.
 
-Direkt auf einen Abschnitt verlinken, z. B. für den Präsenzunterricht: `…/pm-werkstatt/#gate` (oder `#stufe1`, `#stufe2`, `#stufe3`).
+Direkt auf einen Abschnitt verlinken, z. B. für den Präsenzunterricht: `…/pm-werkstatt/#gate` (PM_01: `#stufe1`, `#stufe2`, `#stufe3`, `#gate` · PM_02: `#m2-s1`, `#m2-s2`, `#m2-s3`, `#m2-gate`).
 
 ## Datenschutz
 
 - Die Seite lädt nichts von fremden Servern (keine Google Fonts, keine Skripte von außen).
 - Eingaben und Namen bleiben im Browser des Schülers (localStorage). Es wird nichts an einen Server gesendet.
-- Das Team speichert die Ergebnisse beim Gate als HTML-Datei und reicht sie selbst ein.
-- Die Seite ist öffentlich. Musterlösungen und der Erwartungshorizont der Probe-Kurzarbeit sind für alle sichtbar. Deshalb diese Aufgaben nicht wörtlich in einer Kurzarbeit verwenden.
+- Die Seite ist öffentlich. Lösungshinweise (auch zur Transferaufgabe 2.4) sind für alle sichtbar. Deshalb diese Aufgaben nicht wörtlich in einem Leistungsnachweis verwenden.
+- Abgabe beim Gate: Das Team speichert die Datei und lädt sie in der Teams-Aufgabe hoch. Die Prüfung übernimmt ein Partnerteam.
 
 ## Hinweis für Schüler auf gemeinsam genutzten PCs
 

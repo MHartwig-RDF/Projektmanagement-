@@ -215,6 +215,7 @@ details.eh summary{color:var(--stamp)}
       <div class="btns">
         <button type="button" class="btn ghost" id="snap-save">Zwischenstand sichern</button>
         <button type="button" class="btn ghost" id="snap-load">Zwischenstand laden</button>
+        <button type="button" class="btn ghost" id="heft-btn">Lernheft PM_01 herunterladen</button>
         <input type="file" id="snap-file" accept=".html,.htm,.json" hidden>
       </div>
       <div id="snap-msg" hidden></div>
@@ -269,6 +270,7 @@ details.eh summary{color:var(--stamp)}
         <ul>
           <li><b>Letzte 2 Minuten der Stunde:</b> oben auf „Zwischenstand sichern“ klicken. Sie erhalten eine kleine Datei, z. B. <code>Zwischenstand_Teamname_08-10.html</code>.</li>
           <li>Die Datei im Teams-Kanal Ihres Teams oder in OneDrive ablegen.</li>
+          <li><b>Zum Wiederholen:</b> „Lernheft herunterladen“ erzeugt eine Word-Datei mit allen Lesetexten und Aufgaben des gewählten Moduls, Ihren Antworten und den Musterlösungen. Sie können sie ergänzen und ausdrucken.</li>
           <li><b>Weiterarbeiten:</b> die Datei doppelklicken. Der Kurs öffnet sich, und Sie bestätigen „Zwischenstand übernehmen“. Oder Sie öffnen den Kurs und wählen oben „Zwischenstand laden“.</li>
         </ul>
         <p class="muted" style="font-size:.9rem">Achtung: Beim Laden werden die Eingaben auf diesem Gerät durch den Zwischenstand ersetzt. Arbeiten Sie nicht im privaten Fenster (Inkognito), dort geht alles beim Schließen verloren.</p>
@@ -615,6 +617,7 @@ details.eh summary{color:var(--stamp)}
       <div class="btns">
         <button class="btn stamp" id="export">Ergebnisse als Datei speichern</button>
         <button class="btn ghost" id="copy">Text kopieren</button>
+        <button class="btn ghost" id="heft-g1">Lernheft PM_01 herunterladen (Word)</button>
       </div>
       <div id="export-msg" hidden></div>
       <textarea id="copy-fallback" hidden readonly style="min-height:160px"></textarea>
@@ -892,6 +895,7 @@ details.eh summary{color:var(--stamp)}
       <div class="btns">
         <button class="btn stamp" id="export-pv">Projektvereinbarung als Word-Datei speichern</button>
         <button class="btn ghost" id="copy-pv">Text kopieren</button>
+        <button class="btn ghost" id="heft-g2">Lernheft PM_02 herunterladen (Word)</button>
       </div>
       <div id="export-pv-msg" hidden></div>
       <textarea id="copy-pv-fallback" hidden readonly style="min-height:160px"></textarea>
@@ -1097,6 +1101,7 @@ details.eh summary{color:var(--stamp)}
     modBtns.forEach(b=>b.setAttribute("aria-pressed",b.dataset.mod===m));
     document.getElementById("meta-mod").textContent=MODINFO[m][0];
     document.getElementById("meta-gate").textContent=MODINFO[m][1];
+    const hb=document.getElementById("heft-btn"); if(hb)hb.textContent="Lernheft "+MODINFO[m][0]+" herunterladen";
   }
   function show(name,scroll){
     const panel=document.getElementById(name);
@@ -1317,6 +1322,152 @@ details.eh summary{color:var(--stamp)}
     });
     return zipStore(files);
   }
+  // Lernheft (Word) je Modul
+  const HEFT={"1":{code:"PM01",title:"PM_01 · Vier-Phasen-Modell und magisches Dreieck",panels:["stufe1","stufe2","stufe3"]},
+              "2":{code:"PM02",title:"PM_02 · Definitionsphase",panels:["m2-s1","m2-s2","m2-s3"]}};
+  const XE=t=>String(t??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  function Rn(text,o={}){
+    if(text===""||text==null)return "";
+    let pr="";
+    if(o.mono)pr+='<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/>';
+    if(o.b)pr+="<w:b/>"; if(o.i)pr+="<w:i/>";
+    if(o.color)pr+=`<w:color w:val="${o.color}"/>`;
+    if(o.sz)pr+=`<w:sz w:val="${o.sz}"/><w:szCs w:val="${o.sz}"/>`;
+    return `<w:r>${pr?`<w:rPr>${pr}</w:rPr>`:""}${String(text).split("\n").map(p=>`<w:t xml:space="preserve">${XE(p)}</w:t>`).join("<w:br/>")}</w:r>`;
+  }
+  function Pa(runs,o={}){
+    let pr="";
+    if(o.style)pr+=`<w:pStyle w:val="${o.style}"/>`;
+    if(o.keep)pr+="<w:keepNext/>";
+    if(o.box)pr+=`<w:pBdr><w:left w:val="single" w:sz="18" w:space="8" w:color="${o.box}"/></w:pBdr>`;
+    if(o.fill)pr+=`<w:shd w:val="clear" w:color="auto" w:fill="${o.fill}"/>`;
+    if(o.after!==undefined)pr+=`<w:spacing w:after="${o.after}"/>`;
+    if(o.ind)pr+=`<w:ind w:left="${o.ind}" w:hanging="${o.hang||0}"/>`;
+    return `<w:p>${pr?`<w:pPr>${pr}</w:pPr>`:""}${Array.isArray(runs)?runs.join(""):(runs||"")}</w:p>`;
+  }
+  const txt=el=>el?el.textContent.replace(/\s+/g," ").trim():"";
+  function Tb(rows,o={}){
+    const n=Math.max(...rows.map(r=>r.length)), total=9638;
+    let fr=o.w;
+    if(!fr){const lens=Array(n).fill(0);rows.forEach(r=>r.forEach((c,i)=>{lens[i]+=Math.min(400,(c.plain||"").length)}));
+      const cap=lens.map(l=>Math.max(l,1)); const sum=cap.reduce((a,b)=>a+b,0); fr=cap.map(l=>Math.max(0.12,l/sum)); const s2=fr.reduce((a,b)=>a+b,0); fr=fr.map(f=>f/s2);}
+    const w=fr.map(f=>Math.round(total*f));
+    const trs=rows.map((r,ri)=>{const head=ri===0&&o.head; while(r.length<n)r.push({x:""});
+      return `<w:tr>${head?"<w:trPr><w:tblHeader/></w:trPr>":""}${r.map((c,ci)=>`<w:tc><w:tcPr><w:tcW w:w="${w[ci]}" w:type="dxa"/>${head||c.fill?`<w:shd w:val="clear" w:color="auto" w:fill="${head?"E3E9EA":c.fill}"/>`:""}</w:tcPr>${c.x||"<w:p/>"}</w:tc>`).join("")}</w:tr>`}).join("");
+    const bd=["top","left","bottom","right","insideH","insideV"].map(s=>`<w:${s} w:val="single" w:sz="4" w:space="0" w:color="BFC9CC"/>`).join("");
+    return `<w:tbl><w:tblPr><w:tblW w:w="${total}" w:type="dxa"/><w:tblBorders>${bd}</w:tblBorders><w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="80" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${w.map(x=>`<w:gridCol w:w="${x}"/>`).join("")}</w:tblGrid>${trs}</w:tbl>`+Pa("",{after:80});
+  }
+  const Cl=(text,o={})=>({x:Pa(Rn(text,o),{after:0}),plain:String(text||""),fill:o.fill});
+  const Cr=(runs,plain)=>({x:Pa(runs,{after:0}),plain});
+  function inl(node,f={}){
+    let out=[];
+    node.childNodes.forEach(ch=>{
+      if(ch.nodeType===3){const t=ch.textContent.replace(/\s+/g," "); if(t.trim())out.push(Rn(t,f)); else if(t===" "&&out.length)out.push(Rn(" ",f)); return}
+      if(ch.nodeType!==1)return;
+      const tg=ch.tagName.toUpperCase();
+      if(["TEXTAREA","INPUT","SELECT","BUTTON","SVG"].includes(tg)||ch.classList.contains("hint")||ch.classList.contains("tag")||ch.classList.contains("score"))return;
+      if(tg==="BR"){out.push("<w:r><w:br/></w:r>");return}
+      const g={...f}; if(tg==="B"||tg==="STRONG")g.b=true; if(tg==="I"||tg==="EM")g.i=true; if(tg==="CODE")g.mono=true;
+      out=out.concat(inl(ch,g));
+    });
+    return out;
+  }
+  const ctrlVal=c=>{if(!c)return ""; return (c.value||"").trim()};
+  const ansBox=(v,label="Ihre Antwort: ")=>Pa([Rn(label,{b:true,color:"0E6B6B"}),v?Rn(v):Rn("nicht bearbeitet",{i:true,color:"888888"})],{box:"0E6B6B",fill:"EEF4F3"});
+  function taskTable(id){
+    const t=TASKS[id]; let ok=0,open=0;
+    const rows=[[Cl("Aussage",{b:true}),Cl("Ihre Antwort",{b:true}),Cl("Lösung",{b:true}),Cl("Begründung",{b:true})]];
+    t.items.forEach((it,i)=>{const v=ctrlVal(document.getElementById(id+"_"+i));
+      if(!v)open++; else if(v===it[1])ok++;
+      const mine=v?Cr([Rn(v===it[1]?"✔ ":"✘ ",{b:true,color:v===it[1]?"2B7A34":"B3261E"}),Rn(v)],v):Cl("nicht bearbeitet",{i:true,color:"888888"});
+      rows.push([Cl(it[0]),mine,Cl(it[1],{b:true}),Cl(it[2])]);});
+    return [Tb(rows,{head:true,w:[.34,.18,.17,.31]}),Pa(Rn(`Ihr Ergebnis: ${ok} von ${t.items.length} richtig`+(open?` (${open} nicht bearbeitet)`:""),{b:true}))];
+  }
+  function detTable(){
+    let hit=0;
+    const rows=[[Cl("Nr.",{b:true}),Cl("Satz aus der E-Mail",{b:true}),Cl("Von Ihnen markiert",{b:true}),Cl("Widerspruch zum Modell?",{b:true}),Cl("Erklärung",{b:true})]];
+    SENT.forEach((s,i)=>{const f=flagged.has(i); if(f&&s[1])hit++;
+      rows.push([Cl(String(i+1)),Cl(s[0]),Cl(f?"ja":"–",{b:f,color:f?(s[1]?"2B7A34":"B3261E"):null}),Cl(s[1]?"ja":"nein",{b:s[1]}),Cl(s[2]||"")]);});
+    return [Tb(rows,{head:true,w:[.06,.38,.13,.13,.30]}),Pa(Rn(`Ihr Ergebnis: ${hit} von 3 Fehlern gefunden`,{b:true}))];
+  }
+  function tableDom(tbl){
+    const rows=[...tbl.querySelectorAll("tr")].map(tr=>[...tr.children].map(td=>{
+      const c=td.querySelector("textarea,input,select");
+      if(c){const v=ctrlVal(c); return v?Cl(v):Cl("nicht bearbeitet",{i:true,color:"888888"})}
+      return Cr(inl(td,td.tagName==="TH"?{b:true}:{}),txt(td));
+    }));
+    const head=!!tbl.querySelector("tr th");
+    return Tb(rows,{head});
+  }
+  function conv(el,out){
+    for(const ch of el.children){
+      const tg=ch.tagName.toUpperCase(), cl=ch.classList;
+      if(tg==="SCRIPT"||tg==="STYLE"||tg==="SUMMARY"||ch.hasAttribute("hidden"))continue;
+      if(cl.contains("btns")||cl.contains("nextbar")||cl.contains("tri")||tg==="BUTTON"||cl.contains("stampmark")||cl.contains("score"))continue;
+      if(cl.contains("label")&&ch.closest(".intro")){out.push(Pa(Rn(txt(ch),{color:"56646C",sz:18}),{after:40}));continue}
+      if(tg==="H2"){out.push(Pa(Rn(txt(ch)),{style:"Heading1"}));continue}
+      if(tg==="H3"){out.push(Pa(Rn(txt(ch)),{style:"Heading2"}));continue}
+      if(cl.contains("task-head")){const h=ch.querySelector("h3"); if(h)out.push(Pa(Rn(txt(h)),{style:"Heading2"}));continue}
+      if(tg==="P"){const r=inl(ch); if(r.length)out.push(Pa(r));continue}
+      if(tg==="UL"||tg==="OL"){[...ch.children].forEach((li,i)=>out.push(Pa([Rn(tg==="OL"?(i+1)+". ":"• ")].concat(inl(li)),{ind:360,hang:240,after:40})));out.push(Pa("",{after:40}));continue}
+      if(tg==="TABLE"){out.push(tableDom(ch));continue}
+      if(tg==="DL"){const dts=[...ch.querySelectorAll("dt")]; out.push(Tb(dts.map(dt=>[Cl(txt(dt),{b:true}),Cr(inl(dt.nextElementSibling),txt(dt.nextElementSibling))]),{w:[.24,.76]}));continue}
+      if(cl.contains("phases")){
+        const rows=[[Cl("Phase",{b:true}),Cl("Typische Tätigkeiten",{b:true}),Cl("Ergebnis",{b:true})]];
+        ch.querySelectorAll(".phase").forEach(ph=>{const res=ph.querySelector(".result"); const b=res&&res.querySelector("b");
+          rows.push([Cl(txt(ph.querySelector(".ph-n"))+" "+txt(ph.querySelector("h3")),{b:true}),Cl([...ph.querySelectorAll("li")].map(li=>"• "+txt(li)).join("\n")),Cl(res?txt(res).replace(b?txt(b):"","").trim():"")]);});
+        out.push(Tb(rows,{head:true,w:[.18,.47,.35]}));continue}
+      if(cl.contains("case")){
+        for(const c of ch.children){ if(c.tagName==="DL"){conv({children:[c]},out)} else {const r=inl(c); if(r.length)out.push(Pa(r,{box:"0E6B6B",fill:"DDEDEC"}))} }
+        continue}
+      if(cl.contains("rows")&&TASKS[ch.id]){out.push(...taskTable(ch.id));continue}
+      if(cl.contains("mail")){out.push(...detTable());continue}
+      if(tg==="LABEL"&&cl.contains("f")){
+        const q=inl(ch,{b:true}); if(q.length)out.push(Pa(q,{keep:true,after:40}));
+        const h=ch.querySelector(".hint"); if(h)out.push(Pa(Rn(txt(h),{i:true,color:"56646C"}),{keep:true,after:40}));
+        out.push(ansBox(ctrlVal(ch.querySelector("textarea,input,select"))));continue}
+      if(cl.contains("checks")){ch.querySelectorAll("label").forEach(l=>{const cb=l.querySelector("input"); out.push(Pa([Rn(cb&&cb.checked?"☑ ":"☐ ",{b:true})].concat(inl(l.querySelector("span")||l)),{after:40}))});out.push(Pa("",{after:40}));continue}
+      if(cl.contains("opts")){
+        ch.querySelectorAll("label.opt").forEach(l=>{const r=l.querySelector("input"); out.push(Pa([Rn(r.checked?"◉ ":"○ ",{b:true})].concat(inl(l.querySelector("span"))),{after:40}))});
+        const sel=ch.querySelector("input:checked"); out.push(ansBox(sel?txt(sel.parentElement.querySelector("b")):"","Ihre Wahl: "));continue}
+      if(tg==="DETAILS"){
+        const isEh=cl.contains("eh");
+        out.push(Pa(Rn(isEh?"Musterlösung / Lösungshinweis":txt(ch.querySelector("summary")),{b:true,color:isEh?"B3261E":"1B262D"}),{keep:true,after:60}));
+        conv(ch.querySelector(".inner")||ch,out);continue}
+      conv(ch,out);
+    }
+  }
+  function buildHeft(m){
+    const H=HEFT[m], out=[], team=val("teamname")||val("m2_team");
+    out.push(Pa(Rn("Lernheft "+H.title),{style:"Title"}));
+    out.push(Pa(Rn(`PM-Werkstatt Roboter · ${team?"Team "+team+" · ":""}erstellt am ${new Date().toLocaleDateString("de-DE")}`,{color:"56646C"})));
+    out.push(Pa(Rn("Dieses Heft enthält alle Lesetexte und Aufgaben des Moduls, Ihre eigenen Antworten und die Musterlösungen. Vergleichen Sie Ihre Antworten mit den Musterlösungen und ergänzen Sie eigene Notizen.",{i:true}),{fill:"F2F5F4",box:"B3261E"}));
+    H.panels.forEach((id,k)=>{const pn=document.getElementById(id); if(!pn)return; if(k>0)out.push('<w:p><w:r><w:br w:type="page"/></w:r></w:p>'); conv(pn,out);});
+    const W='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"', HD='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+    const doc=`${HD}<w:document ${W}><w:body>${out.join("")}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+    const st=(id,name,pPr,rPr)=>`<w:style w:type="paragraph" w:styleId="${id}"><w:name w:val="${name}"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr>${pPr}</w:pPr><w:rPr>${rPr}</w:rPr></w:style>`;
+    const styles=`${HD}<w:styles ${W}><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:eastAsia="Arial" w:cs="Arial"/><w:sz w:val="21"/><w:szCs w:val="21"/><w:lang w:val="de-DE"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="100" w:line="264" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>`+
+      st("Title","Title",'<w:spacing w:after="120"/>','<w:b/><w:color w:val="1B262D"/><w:sz w:val="40"/><w:szCs w:val="40"/>')+
+      st("Heading1","heading 1",'<w:keepNext/><w:spacing w:before="240" w:after="120"/><w:outlineLvl w:val="0"/>','<w:b/><w:color w:val="1B262D"/><w:sz w:val="32"/><w:szCs w:val="32"/>')+
+      st("Heading2","heading 2",'<w:keepNext/><w:spacing w:before="280" w:after="80"/><w:outlineLvl w:val="1"/>','<w:b/><w:color w:val="0E6B6B"/><w:sz w:val="26"/><w:szCs w:val="26"/>')+`</w:styles>`;
+    const enc=new TextEncoder();
+    const files=[
+      ["[Content_Types].xml",`${HD}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`],
+      ["_rels/.rels",`${HD}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`],
+      ["word/_rels/document.xml.rels",`${HD}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
+      ["word/document.xml",doc],["word/styles.xml",styles]
+    ].map(([name,s])=>({name,data:enc.encode(s)}));
+    return zipStore(files);
+  }
+  function saveHeft(m,msgId){
+    const team=val("teamname")||val("m2_team")||"Team"; let bytes;
+    try{bytes=buildHeft(m)}catch(e){sayIn(msgId,"Das Lernheft konnte nicht erstellt werden.",false);return}
+    doSave(msgId,`Lernheft_${HEFT[m].code}_${safeName(team)}.docx`,bytes,"application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+  }
+  document.getElementById("heft-btn").addEventListener("click",()=>saveHeft(curMod,"snap-msg"));
+  document.getElementById("heft-g1").addEventListener("click",()=>saveHeft("1","export-msg"));
+  document.getElementById("heft-g2").addEventListener("click",()=>saveHeft("2","export-pv-msg"));
+
   document.getElementById("export-pv").addEventListener("click",()=>{
     const d=pvData(); let bytes;
     try{bytes=buildDocx(d)}catch(e){sayIn("export-pv-msg","Die Word-Datei konnte nicht erstellt werden. Nutzen Sie „Text kopieren“.",false);return}

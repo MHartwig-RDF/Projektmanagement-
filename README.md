@@ -1,7 +1,7 @@
 # PM-Werkstatt Roboter
 
 Selbstlernkurs Projektmanagement für die Klasse MBT2528 (Rudolf-Diesel-Fachschule Nürnberg).
-Stand 29.09.2026 · Module PM_01 und PM_02 fertig, PM_03 folgt. PM_02 erzeugt die Projektvereinbarung direkt als Word-Datei in der RDF-Vorlage.
+Stand 06.10.2026 · Module PM_01, PM_02 und PM_03 fertig. PM_02 erzeugt die Projektvereinbarung direkt als Word-Datei in der RDF-Vorlage. PM_03 enthält einen PSP-Editor (Grafik als PNG), erzeugt die AP-Formulare als Word-Datei und den Projektordner als Excel-Datei (PSP, Protokoll mit Balkenplan, Stundennachweis, Auswertung).
 
 ## Veröffentlichen mit GitHub Pages
 
@@ -11,7 +11,7 @@ Stand 29.09.2026 · Module PM_01 und PM_02 fertig, PM_03 folgt. PM_02 erzeugt di
 4. Nach ca. 1 Minute ist der Kurs erreichbar unter `https://<benutzername>.github.io/pm-werkstatt/`.
 5. Für eine neue Version: `index.html` im Repository durch die neue Datei ersetzen. Der Link bleibt gleich.
 
-Direkt auf einen Abschnitt verlinken, z. B. für den Präsenzunterricht: `…/pm-werkstatt/#gate` (PM_01: `#stufe1`, `#stufe2`, `#stufe3`, `#gate` · PM_02: `#m2-s1`, `#m2-s2`, `#m2-s3`, `#m2-gate`).
+Direkt auf einen Abschnitt verlinken, z. B. für den Präsenzunterricht: `…/pm-werkstatt/#gate` (PM_01: `#stufe1`, `#stufe2`, `#stufe3`, `#gate` · PM_02: `#m2-s1`, `#m2-s2`, `#m2-s3`, `#m2-gate` · PM_03: `#m3-s1`, `#m3-s2`, `#m3-s3`, `#m3-gate`).
 
 ## Datenschutz
 

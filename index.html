@@ -2523,7 +2523,7 @@ nav.tabs li.locked{display:none!important}
   // ===== Freigabe-Schalter: welche Stufen sind online (GitHub) für Schüler sichtbar? =====
   // Lokal (OneDrive, file://) bleibt alles sichtbar, nicht freigegebene Reiter sind mit „Vorschau“ markiert.
   // Freigeben = ID in die Liste aufnehmen, z. B. ["m3-s1","m3-s2"].
-  const FREIGEGEBEN=["m3-s1"];
+  const FREIGEGEBEN=["m3-s1","m3-s2"];
   const ALLE_M3=["m3-s1","m3-s2","m3-s3","m3-gate"];
   const ONLINE=location.hostname.endsWith("github.io")||/[?&]vorschau=online/.test(location.search);
   const GESPERRT=ALLE_M3.filter(id=>!FREIGEGEBEN.includes(id));
